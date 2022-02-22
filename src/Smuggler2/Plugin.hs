@@ -350,7 +350,7 @@ smugglerPlugin clopts modSummary tcEnv
                   ( vcat
                       ( map
                           (ppr . leaveOpen)
-                          (filter letThrough imports')
+                          (filter (letThrough . snd) $ zip imports' imports)
                       )
                   )
             )
@@ -371,10 +371,9 @@ smugglerPlugin clopts modSummary tcEnv
         letThrough :: LImportDecl pass -> Bool
         letThrough (L _ i) = notImplicit i && (keepInstanceOnlyImports || notInstancesOnly i)
 
-        leaveOpen :: LImportDecl pass -> LImportDecl pass
-        leaveOpen (L l decl) = L l $ case ideclHiding decl of
-          Just (False, L _ _) -- ie, not hiding
-            | thisModule `elem` kModules || thisModule `elem` mModules -> decl {ideclHiding = Nothing}
+        leaveOpen :: (LImportDecl pass, LImportDecl pass) -> LImportDecl pass
+        leaveOpen (L l decl, L _ orig) = L l $ case ideclHiding decl of
+          _ | thisModule `elem` kModules || thisModule `elem` mModules -> orig
           _ -> decl
           where
             thisModule = unLoc (ideclName decl)
@@ -383,7 +382,7 @@ smugglerPlugin clopts modSummary tcEnv
             oModules = unLoc . ideclName <$> filter isOpen (unLoc <$> imports) -- original open imports
               where
                 isOpen = isNothing . ideclHiding
-            kModules = lModules `intersect` oModules -- original open imports to leave open
+            kModules = maybe id intersect lModules oModules -- original open imports to leave open
 
     -- Construct the path into which GHC's version of minimal imports is dumped
     mkMinimalImportsPath :: DynFlags -> Module -> FilePath

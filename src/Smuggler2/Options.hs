@@ -30,7 +30,7 @@ data Options = Options
   { importAction :: ImportAction,
     exportAction :: ExportAction,
     newExtension :: Maybe String,
-    leaveOpenImports :: [ModuleName],
+    leaveOpenImports :: Maybe [ModuleName],
     makeOpenImports :: [ModuleName]
   }
   deriving (Outputable)
@@ -38,7 +38,7 @@ data Options = Options
 -- | The default is to retain instance-only imports (eg, Data.List () )
 -- and add explict exports only if they are not already present
 defaultOptions :: Options
-defaultOptions = Options PreserveInstanceImports AddExplicitExports Nothing [] []
+defaultOptions = Options PreserveInstanceImports AddExplicitExports Nothing (Just []) []
 
 -- | Simple command line option parser.  Last occurrence wins.
 parseCommandLineOptions :: [CommandLineOption] -> Options
@@ -52,9 +52,10 @@ parseCommandLineOptions = foldl' parseCommandLineOption defaultOptions
       "noexportprocessing" -> opts {exportAction = NoExportProcessing}
       "addexplicitexports" -> opts {exportAction = AddExplicitExports}
       "replaceexports" -> opts {exportAction = ReplaceExports}
+      "leaveopenimports" -> opts {leaveOpenImports = Nothing}
       _
         | Just modulenames <- stripPrefixCI "leaveopenimports:" clo ->
-          opts {leaveOpenImports = parseModuleNames modulenames}
+          opts {leaveOpenImports = Just $ parseModuleNames modulenames}
         | Just modulenames <- stripPrefixCI "makeopenimports:" clo ->
           opts {makeOpenImports = parseModuleNames modulenames}
         | otherwise -> opts {newExtension = Just clo}
