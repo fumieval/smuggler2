@@ -66,7 +66,7 @@ import Smuggler2.Exports (mkExportAnnT)
 import Smuggler2.Imports (getMinimalImports)
 import Smuggler2.Options
   ( ExportAction (AddExplicitExports, NoExportProcessing, ReplaceExports),
-    ImportAction (MinimiseImports, NoImportProcessing),
+    ImportAction (..),
     Options (..),
     parseCommandLineOptions,
   )
@@ -350,7 +350,7 @@ smugglerPlugin clopts modSummary tcEnv
                   ( vcat
                       ( map
                           (ppr . leaveOpen)
-                          (filter (letThrough . snd) $ zip imports' imports)
+                          (filter letThrough $ zip imports' imports)
                       )
                   )
             )
@@ -358,18 +358,17 @@ smugglerPlugin clopts modSummary tcEnv
         notImplicit :: ImportDecl pass -> Bool
         notImplicit = not . ideclImplicit
 
-        notInstancesOnly :: ImportDecl pass -> Bool
-        notInstancesOnly i = case ideclHiding i of
-          Just (False, L _ []) -> False
-          _ -> True
+        instanceOnly :: ImportDecl pass -> Bool
+        instanceOnly i = case ideclHiding i of
+          Just (False, L _ []) -> True
+          _ -> False
 
-        keepInstanceOnlyImports :: Bool
-        keepInstanceOnlyImports = importAction options /= MinimiseImports
+        -- Ignore explicit instance only imports
+        letThrough :: (LImportDecl pass, LImportDecl pass) -> Bool
+        letThrough (L _ i, L _ orig) = notImplicit i
+          && (not (instanceOnly i) || instanceOnly orig)
 
-        -- Ignore explicit instance only imports, unless the 'MinimiseImports'
-        -- option is specified
-        letThrough :: LImportDecl pass -> Bool
-        letThrough (L _ i) = notImplicit i && (keepInstanceOnlyImports || notInstancesOnly i)
+        isOpen = isNothing . ideclHiding
 
         leaveOpen :: (LImportDecl pass, LImportDecl pass) -> LImportDecl pass
         leaveOpen (L l decl, L _ orig) = L l $ case ideclHiding decl of
@@ -380,8 +379,6 @@ smugglerPlugin clopts modSummary tcEnv
             mModules = makeOpenImports options
             lModules = leaveOpenImports options
             oModules = unLoc . ideclName <$> filter isOpen (unLoc <$> imports) -- original open imports
-              where
-                isOpen = isNothing . ideclHiding
             kModules = maybe id intersect lModules oModules -- original open imports to leave open
 
     -- Construct the path into which GHC's version of minimal imports is dumped

@@ -18,7 +18,7 @@ import Outputable ( Outputable )
 import Plugins ( CommandLineOption )
 
 -- | Ways of performing import processing
-data ImportAction = NoImportProcessing | PreserveInstanceImports | MinimiseImports
+data ImportAction = NoImportProcessing | PreserveInstanceImports
   deriving (Eq, Show)
 
 -- | Ways of performing emport processing
@@ -48,7 +48,6 @@ parseCommandLineOptions = foldl' parseCommandLineOption defaultOptions
     parseCommandLineOption opts clo = case toLower <$> clo of
       "noimportprocessing" -> opts {importAction = NoImportProcessing}
       "preserveinstanceimports" -> opts {importAction = PreserveInstanceImports}
-      "minimiseimports" -> opts {importAction = MinimiseImports}
       "noexportprocessing" -> opts {exportAction = NoExportProcessing}
       "addexplicitexports" -> opts {exportAction = AddExplicitExports}
       "replaceexports" -> opts {exportAction = ReplaceExports}
